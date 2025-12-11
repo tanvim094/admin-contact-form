@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container" id="loginSection">
+    <h2>Admin Login</h2>
+    <form id="loginForm">
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="adminUser" required>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="adminPass" required>
+        </div>
+        <button type="submit" id="loginBtn">Login</button>
+        <div id="loginStatus" style="margin-top:10px; color:red; text-align:center;"></div>
+    </form>
+</div>
+
+<div class="container admin-container hidden" id="dashboardSection">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Messages Received</h2>
+        <button class="logout-btn" onclick="logout()" style="width:auto; padding: 5px 15px;">Logout</button>
+    </div>
+    
+    <div class="table-wrapper">
+        <table id="dataTable">
+            <thead>
+                </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // PASTE YOUR DEPLOYED GAS URL HERE
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjjT6FQ5_KH2Ditd35dQN52631VXlfuyujLOwI8ixvAf8JzWb-oo4XaurKacIaXldSNQ/exec";
+
+    const loginForm = document.getElementById('loginForm');
+    const loginSection = document.getElementById('loginSection');
+    const dashboardSection = document.getElementById('dashboardSection');
+    const loginStatus = document.getElementById('loginStatus');
+
+    // Handle Login
+    loginForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const user = document.getElementById('adminUser').value;
+        const pass = document.getElementById('adminPass').value;
+        const btn = document.getElementById('loginBtn');
+
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+
+        fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify({
+                action: "admin_fetch",
+                username: user,
+                password: pass
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.result === "success") {
+                showDashboard(data.data);
+            } else {
+                loginStatus.textContent = "Invalid Username or Password";
+            }
+        })
+        .catch(err => {
+            loginStatus.textContent = "Connection Error";
+            console.error(err);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = "Login";
+        });
+    });
+
+    // Function to render table
+    function showDashboard(rows) {
+        loginSection.classList.add('hidden');
+        dashboardSection.classList.remove('hidden');
+
+        const table = document.getElementById('dataTable');
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+
+        // Render Headers (Row 0)
+        if (rows.length > 0) {
+            let headerRow = "<tr>";
+            rows[0].forEach(col => {
+                headerRow += `<th>${col}</th>`;
+            });
+            headerRow += "</tr>";
+            thead.innerHTML = headerRow;
+        }
+
+        // Render Data (Rows 1+)
+        for (let i = 1; i < rows.length; i++) {
+            let tr = "<tr>";
+            rows[i].forEach(col => {
+                // Format date if detected
+                let val = col;
+                if (typeof col === 'string' && col.includes('T') && col.includes('Z')) {
+                    val = new Date(col).toLocaleString();
+                }
+                tr += `<td>${val}</td>`;
+            });
+            tr += "</tr>";
+            tbody.innerHTML += tr;
+        }
+    }
+
+    function logout() {
+        location.reload();
+    }
+</script>
+
+</body>
+</html>
